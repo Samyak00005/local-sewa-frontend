@@ -2,11 +2,15 @@ import { Link } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { ArrowRight02Icon, UserIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, UserIcon } from "@hugeicons/core-free-icons";
+import { getStoredUser, getToken } from "../../../lib/api";
 
 /* ----- SIDEBAR PROFILE ----- */
 
 function SidebarProfile({ onClose }) {
+  const user = getStoredUser();
+  const isLoggedIn = Boolean(getToken() && user);
+
   return (
     <div
       className="
@@ -16,20 +20,12 @@ function SidebarProfile({ onClose }) {
         py-3
       "
     >
-      <Link
-        to="/profile"
-        onClick={onClose}
-        className="
-          flex
-          items-center
-          gap-3
-          rounded-xl
-          p-2
-          transition
-          hover:bg-[#F7FAF8]
-          active:scale-[0.99]
-        "
-      >
+      <div className="flex items-center gap-2">
+        <Link
+          to={isLoggedIn ? "/profile" : "/auth"}
+          onClick={onClose}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition hover:bg-[#F7FAF8] active:scale-[0.99]"
+        >
         {/* ----- PROFILE PHOTO ----- */}
 
         <div
@@ -63,7 +59,7 @@ function SidebarProfile({ onClose }) {
               text-[#9CA3AF]
             "
           >
-            Welcome back
+            {isLoggedIn ? "Welcome back" : "Local Sewa account"}
           </p>
 
           <p
@@ -75,7 +71,7 @@ function SidebarProfile({ onClose }) {
               text-[#10231A]
             "
           >
-            Samyak
+            {isLoggedIn ? user.full_name || "Customer" : "Sign in or register"}
           </p>
 
           <p
@@ -86,19 +82,20 @@ function SidebarProfile({ onClose }) {
               text-[#16A34A]
             "
           >
-            View Profile
+            {isLoggedIn ? "View Profile" : "Continue"}
           </p>
         </div>
+        </Link>
 
-        {/* ----- ARROW ----- */}
-
-        <HugeiconsIcon
-          icon={ArrowRight02Icon}
-          size={17}
-          strokeWidth={1.8}
-          className="shrink-0 text-[#9CA3AF]"
-        />
-      </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close menu"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#DDE9E1] bg-white text-[#475569] shadow-sm transition hover:bg-[#F0FDF4] hover:text-[#15803D]"
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={20} strokeWidth={2} />
+        </button>
+      </div>
     </div>
   );
 }

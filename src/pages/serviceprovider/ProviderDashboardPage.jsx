@@ -1,16 +1,66 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+
 import ProviderSidebar from "../../components/serviceprovider/ProviderSidebar";
 import ProviderTopBar from "../../components/serviceprovider/ProviderTopBar";
 import ProviderStats from "../../components/serviceprovider/ProviderStats";
 import ProviderProfileCard from "../../components/serviceprovider/ProviderProfileCard";
-import ProviderQuickActions from "../../components/serviceprovider/ProviderQuickActions";
 import ProviderRequests from "../../components/serviceprovider/ProviderRequests";
 import ProviderBottomNav from "../../components/serviceprovider/ProviderBottomNav";
 
-import { providerData } from "../../data/providerDashboard";
+import { apiRequest } from "../../lib/api";
+
+const emptyDashboard = {
+  id: null,
+  ownerName: "Provider",
+  businessName: "",
+  category: "",
+  location: "",
+  phone: "",
+  whatsapp: "",
+  email: "",
+  rating: 0,
+  reviews: 0,
+  verified: false,
+  available: false,
+  profileCompletion: 0,
+  description: "",
+  stats: { todayRequests: 0, pendingRequests: 0, completedJobs: 0, totalReviews: 0 },
+  services: [],
+  requests: [],
+};
 
 function ProviderDashboardPage() {
+  const [dashboard, setDashboard] = useState(emptyDashboard);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest("/api/provider/dashboard")
+      .then((data) => {
+        if (cancelled || !data.provider) return;
+        setDashboard({
+          ...data.provider,
+          requests: (data.provider.requests || []).map((request) => ({
+            ...request,
+            status: request.status.replace(/(^|_)([a-z])/g, (_, space, letter) => `${space ? " " : ""}${letter.toUpperCase()}`),
+          })),
+        });
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#F7FAF8]">
+    <div className="min-h-screen bg-[#DCE9E1]">
       <div className="flex">
 
         {/* Desktop Sidebar */}
@@ -52,7 +102,7 @@ function ProviderDashboardPage() {
                   sm:text-3xl
                 "
               >
-                {providerData.ownerName} 👋
+                {dashboard.ownerName} 👋
               </h2>
 
               <p className="mt-1 text-sm text-[#94A3B8]">
@@ -62,7 +112,15 @@ function ProviderDashboardPage() {
 
             {/* Stats */}
 
-            <ProviderStats stats={providerData.stats} />
+            {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+
+            {loading && (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-[20px] bg-white" />)}
+              </div>
+            )}
+
+            {!loading && <ProviderStats stats={dashboard.stats} />}
 
             {/* Desktop grid */}
 
@@ -71,20 +129,19 @@ function ProviderDashboardPage() {
               {/* LEFT */}
 
               <div className="space-y-6">
-                <ProviderQuickActions />
+                <ProviderProfileCard
+                  key={`${dashboard.id}-${dashboard.available}`}
+                  provider={dashboard}
+                />
 
                 <ProviderRequests
-                  requests={providerData.requests}
+                  requests={dashboard.requests.slice(0, 3)}
                 />
               </div>
 
               {/* RIGHT */}
 
-              <div className="space-y-6">
-                <ProviderProfileCard
-                  provider={providerData}
-                />
-
+              <div className="mt-4 space-y-6 border-t border-[#BFD1C5] pt-8 xl:mt-0 xl:border-t-0 xl:pt-0">
                 {/* Profile Completion */}
 
                 <section
@@ -108,7 +165,7 @@ function ProviderDashboardPage() {
                     </div>
 
                     <span className="text-xl font-extrabold text-[#16A34A]">
-                      {providerData.profileCompletion}%
+                      {dashboard.profileCompletion}%
                     </span>
                   </div>
 
@@ -116,15 +173,20 @@ function ProviderDashboardPage() {
                     <div
                       className="h-full rounded-full bg-[#16A34A]"
                       style={{
-                        width: `${providerData.profileCompletion}%`,
+                        width: `${dashboard.profileCompletion}%`,
                       }}
                     />
                   </div>
 
-                  <button
+                  <Link
+                    to="/provider/profile"
                     className="
                       mt-4
+                      flex
+                      h-11
                       w-full
+                      items-center
+                      justify-center
                       rounded-xl
                       bg-[#ECFDF3]
                       py-2.5
@@ -136,7 +198,7 @@ function ProviderDashboardPage() {
                     "
                   >
                     Complete Profile
-                  </button>
+                  </Link>
                 </section>
 
                 {/* Tips */}

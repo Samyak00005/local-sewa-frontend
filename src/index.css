@@ -1,13 +1,61 @@
 @import "tailwindcss";
 
+@layer components {
+  .form-input {
+    @apply h-12 w-full rounded-xl border border-[#DDE9E1] bg-[#FAFCFB] px-3 text-sm outline-none transition focus:border-[#86EFAC] focus:bg-white focus:ring-4 focus:ring-[#DCFCE7];
+  }
+}
+
 html,
 body,
 #root {
     min-height: 100%;
 }
 
+html {
+    scroll-padding-bottom: 38vh;
+}
+
 body {
     margin: 0;
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
+}
+
+input,
+textarea,
+select {
+    scroll-margin-top: 6rem;
+    scroll-margin-bottom: 38vh;
+}
+
+[data-bottom-navigation] {
+    transition: transform 180ms ease, opacity 180ms ease;
+}
+
+@media (max-width: 768px) {
+    body.keyboard-active {
+        padding-bottom: max(40vh, var(--keyboard-height, 0px));
+        scroll-padding-bottom: max(40vh, var(--keyboard-height, 0px));
+    }
+
+    body.keyboard-active [data-bottom-navigation] {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    [data-keyboard-scroll] {
+        max-height: calc(var(--app-viewport-height, 100dvh) - 1rem);
+        overscroll-behavior: contain;
+        overflow-y: auto;
+        scroll-padding-bottom: max(38vh, var(--keyboard-height, 0px));
+    }
+}
+
+@supports (height: 100dvh) {
+    body,
+    #root {
+        min-height: 100dvh;
+    }
 }

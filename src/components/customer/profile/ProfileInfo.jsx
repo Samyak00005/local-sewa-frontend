@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import {
@@ -12,32 +12,102 @@ import {
   WhatsappIcon,
 } from "@hugeicons/core-free-icons";
 
+import { apiRequest, saveSession } from "../../../lib/api";
+import { DEFAULT_LOCATION, getPreferredLocation, setPreferredLocation } from "../../../hooks/usePreferredLocation";
+
+function samePhoneNumber(first, second) {
+  const normalize = (value) => String(value || "").replace(/\D/g, "").slice(-10);
+  const firstNumber = normalize(first);
+  return Boolean(firstNumber && firstNumber === normalize(second));
+}
+
 function ProfileInfo() {
   const [isEditing, setIsEditing] = useState(false);
+  const [whatsappSameAsPhone, setWhatsappSameAsPhone] = useState(false);
 
   const [profile, setProfile] = useState({
     name: "Username",
     phone: "",
     whatsapp: "",
     email: "",
-    location: "Chandrapur",
+    location: DEFAULT_LOCATION,
   });
 
   const [originalProfile, setOriginalProfile] = useState(profile);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest("/api/profile")
+      .then((data) => {
+        if (cancelled) return;
+        const user = data.profile;
+        const nextProfile = {
+          name: user.full_name || "",
+          phone: user.phone || "",
+          whatsapp: user.whatsapp || "",
+          email: user.email || "",
+          location: getPreferredLocation() || user.location || DEFAULT_LOCATION,
+        };
+        setProfile(nextProfile);
+        setOriginalProfile(nextProfile);
+        setWhatsappSameAsPhone(samePhoneNumber(nextProfile.phone, nextProfile.whatsapp));
+      })
+      .catch((error) => {
+        if (!cancelled) setMessage(error.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleEdit = () => {
     setOriginalProfile(profile);
+    setWhatsappSameAsPhone(samePhoneNumber(profile.phone, profile.whatsapp));
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setProfile(originalProfile);
+    setWhatsappSameAsPhone(samePhoneNumber(originalProfile.phone, originalProfile.whatsapp));
     setIsEditing(false);
   };
 
-  const handleSave = () => {
-    setOriginalProfile(profile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    setMessage("");
+    try {
+      const data = await apiRequest("/api/profile", {
+        method: "PUT",
+        body: {
+          full_name: profile.name,
+          email: profile.email,
+          whatsapp: whatsappSameAsPhone ? profile.phone : profile.whatsapp,
+          location: profile.location,
+        },
+      });
+      const updated = data.profile;
+      const nextProfile = {
+        name: updated.full_name || "",
+        phone: updated.phone || "",
+        whatsapp: updated.whatsapp || "",
+        email: updated.email || "",
+        location: updated.location || DEFAULT_LOCATION,
+      };
+      setProfile(nextProfile);
+      setOriginalProfile(nextProfile);
+      setWhatsappSameAsPhone(samePhoneNumber(nextProfile.phone, nextProfile.whatsapp));
+      saveSession(null, updated, localStorage.getItem("local_sewa_active_role") || "CUSTOMER");
+      setPreferredLocation(nextProfile.location);
+      setIsEditing(false);
+      setMessage("Profile updated successfully.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChange = (field, value) => {
@@ -45,6 +115,14 @@ function ProfileInfo() {
       ...current,
       [field]: value,
     }));
+  };
+
+  const setWhatsAppPreference = (useSameNumber) => {
+    setWhatsappSameAsPhone(useSameNumber);
+    if (useSameNumber) {
+      setProfile((current) => ({ ...current, whatsapp: current.phone }));
+    }
+    setMessage("");
   };
 
   return (
@@ -92,6 +170,7 @@ function ProfileInfo() {
           isEditing={isEditing}
           placeholder="Enter phone number"
           type="tel"
+          readOnly
           isLast={false}
           onChange={(value) => handleChange("phone", value)}
         />
@@ -100,13 +179,34 @@ function ProfileInfo() {
         <ProfileField
           icon={WhatsappIcon}
           label="WhatsApp"
-          value={profile.whatsapp}
+          value={whatsappSameAsPhone ? profile.phone : profile.whatsapp}
           isEditing={isEditing}
           placeholder="Enter WhatsApp number"
           type="tel"
+          readOnly={whatsappSameAsPhone}
           isLast={false}
-          onChange={(value) => handleChange("whatsapp", value)}
+          onChange={(value) => {
+            setWhatsappSameAsPhone(false);
+            handleChange("whatsapp", value);
+          }}
         />
+
+        {isEditing && (
+          <div className="border-b border-[#F1F5F9] bg-[#FAFCFB] px-4 py-3 pl-[4.25rem]">
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                checked={whatsappSameAsPhone}
+                onChange={(event) => setWhatsAppPreference(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+              />
+              <span>
+                <span className="block text-xs font-bold text-[#166534]">WhatsApp number is same as phone</span>
+                <span className="mt-0.5 block text-[11px] leading-4 text-[#6B7280]">Turn this off to use a different WhatsApp number.</span>
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Email */}
         <ProfileField
@@ -152,14 +252,21 @@ function ProfileInfo() {
             <button
               type="button"
               onClick={handleSave}
+              disabled={saving}
               className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#16A34A] text-sm font-semibold text-white transition hover:bg-[#15803D] active:scale-[0.98]"
             >
               <HugeiconsIcon icon={SaveIcon} size={17} strokeWidth={2} />
-              Save
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         )}
       </div>
+
+      {message && (
+        <p className="mt-3 rounded-xl bg-[#F0FDF4] px-3 py-2 text-xs font-semibold text-[#15803D]">
+          {message}
+        </p>
+      )}
     </section>
   );
 }
@@ -175,6 +282,7 @@ function ProfileField({
   type = "text",
   isLast = false,
   onChange,
+  readOnly = false,
 }) {
   return (
     <div
@@ -191,7 +299,7 @@ function ProfileField({
       <div className="min-w-0 flex-1">
         <p className="text-xs text-[#9CA3AF]">{label}</p>
 
-        {isEditing ? (
+        {isEditing && !readOnly ? (
           <input
             type={type}
             value={value}

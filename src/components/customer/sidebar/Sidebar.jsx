@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useEffect } from "react";
 
 import SidebarLocation from "./SidebarLocation";
 import SidebarLogout from "./SidebarLogout";
@@ -7,6 +8,20 @@ import SidebarProfile from "./SidebarProfile";
 import SidebarRoleSwitcher from "./SidebarRoleSwitcher";
 
 function Sidebar({ isOpen, onClose }) {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   return createPortal(
     <>
       {/* ----- BACKDROP ----- */}
@@ -33,6 +48,8 @@ function Sidebar({ isOpen, onClose }) {
       {/* ----- SIDEBAR ----- */}
 
       <aside
+        aria-hidden={!isOpen}
+        aria-label="Customer navigation"
         className={`
           fixed
           right-0

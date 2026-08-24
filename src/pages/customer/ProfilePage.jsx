@@ -13,12 +13,14 @@ function ProfilePage() {
       <ProfileHeader />
 
       <main className="px-4 py-4">
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-start">
           <ProfileInfo />
 
-          <ProfileActions />
+          <div>
+            <ProfileActions />
 
-          <ProfileAbout />
+            <ProfileAbout />
+          </div>
         </div>
       </main>
     </div>

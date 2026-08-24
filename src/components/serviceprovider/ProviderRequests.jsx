@@ -84,9 +84,17 @@ function ProviderRequests({ requests }) {
                   font-bold
 
                   ${
-                    request.status === "Accepted"
-                      ? "bg-[#DCFCE7] text-[#15803D]"
-                      : "bg-[#FEF3C7] text-[#B45309]"
+                    ["Completed"].includes(request.status)
+                      ? "border border-[#86EFAC] bg-[#DCFCE7] text-[#166534]"
+                      : ["Accepted", "In Progress"].includes(request.status)
+                        ? "bg-[#DBEAFE] text-[#1D4ED8]"
+                        : ["Rejected"].includes(request.status)
+                          ? "border border-[#FECACA] bg-[#FFF1F2] text-[#BE123C]"
+                          : ["Cancelled"].includes(request.status)
+                            ? "border border-[#CBD5E1] bg-[#F1F5F9] text-[#475569]"
+                            : ["Not Completed"].includes(request.status)
+                              ? "border border-[#FED7AA] bg-[#FFF7ED] text-[#C2410C]"
+                          : "bg-[#FEF3C7] text-[#B45309]"
                   }
                 `}
               >
@@ -111,65 +119,36 @@ function ProviderRequests({ requests }) {
                 {request.date} • {request.time}
               </p>
 
-              <a
-                href={`tel:${request.phone}`}
-                className="
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-[#ECFDF3]
-                  text-[#15803D]
-                "
-              >
-                <HugeiconsIcon
-                  icon={Call02Icon}
-                  size={16}
-                  strokeWidth={2}
-                />
-              </a>
+              {(request.customerPhone || request.phone) && (
+                <a
+                  href={`tel:${request.customerPhone || request.phone}`}
+                  aria-label={`Call ${request.customerName || "customer"}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ECFDF3] text-[#15803D]"
+                >
+                  <HugeiconsIcon icon={Call02Icon} size={16} strokeWidth={2} />
+                </a>
+              )}
             </div>
 
             {/* Pending Actions */}
 
             {request.status === "Pending" && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  className="
-                    h-9
-                    rounded-xl
-                    border
-                    border-[#E5E7EB]
-                    text-xs
-                    font-bold
-                    text-[#64748B]
-                    transition
-                    hover:bg-[#F8FAFC]
-                  "
-                >
-                  Reject
-                </button>
-
-                <button
-                  className="
-                    h-9
-                    rounded-xl
-                    bg-[#16A34A]
-                    text-xs
-                    font-bold
-                    text-white
-                    transition
-                    hover:bg-[#15803D]
-                  "
-                >
-                  Accept
-                </button>
-              </div>
+              <Link
+                to="/provider/requests"
+                className="mt-3 flex h-10 items-center justify-center rounded-xl bg-[#16A34A] text-xs font-bold text-white transition hover:bg-[#15803D]"
+              >
+                Review & respond
+              </Link>
             )}
           </div>
         ))}
+
+        {requests.length === 0 && (
+          <div className="rounded-[20px] border border-dashed border-[#CDE2D3] bg-white px-5 py-10 text-center">
+            <p className="text-sm font-bold text-[#10231A]">No requests yet</p>
+            <p className="mt-1 text-xs text-[#64748B]">New customer bookings will appear here.</p>
+          </div>
+        )}
       </div>
     </section>
   );

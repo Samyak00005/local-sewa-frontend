@@ -1,27 +1,12 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import {
   Briefcase01Icon,
-  UserIcon,
+  ArrowRight02Icon,
 } from "@hugeicons/core-free-icons";
-
-/* ----- ROLES ----- */
-
-const roles = [
-  {
-    id: "client",
-    name: "Client",
-    icon: UserIcon,
-  },
-  {
-    id: "provider",
-    name: "Service Provider",
-    icon: Briefcase01Icon,
-  },
-];
+import { getStoredUser } from "../../../lib/api";
 
 /* =========================================================
    COMPONENT
@@ -29,24 +14,25 @@ const roles = [
 
 function SidebarRoleSwitcher() {
   const navigate = useNavigate();
+  const user = getStoredUser();
+  const userRoles = Array.isArray(user?.roles)
+    ? user.roles.map((role) => String(role).toUpperCase())
+    : [];
+  const hasProviderRole = userRoles.includes("PROVIDER");
 
-  const [activeRole, setActiveRole] = useState("client");
+  if (!user) return null;
 
   /* =======================================================
      ROLE SWITCH
   ======================================================= */
 
-  const handleRoleSwitch = (roleId) => {
-    setActiveRole(roleId);
-
-    if (roleId === "provider") {
-      navigate("/provider/dashboard");
+  const handleRoleSwitch = () => {
+    if (hasProviderRole) {
+      localStorage.setItem("local_sewa_active_role", "PROVIDER");
+      navigate("/provider/dashboard", { replace: true });
       return;
     }
-
-    if (roleId === "client") {
-      navigate("/");
-    }
+    navigate("/auth/provider/register");
   };
 
   return (
@@ -69,56 +55,25 @@ function SidebarRoleSwitcher() {
 
       {/* ----- SWITCH ----- */}
 
-      <div
-        className="
-          grid
-          grid-cols-2
-          rounded-xl
-          border
-          border-[#E5EDE8]
-          bg-[#F1F5F3]
-          p-1
-        "
+      <button
+        type="button"
+        data-navigation
+        onClick={handleRoleSwitch}
+        className="flex w-full items-center gap-3 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-left text-sm font-extrabold text-[#15803D] shadow-sm transition hover:border-[#86EFAC] hover:bg-[#DCFCE7] active:scale-[0.99]"
       >
-        {roles.map((role) => {
-          const isActive = activeRole === role.id;
-
-          return (
-            <button
-              key={role.id}
-              type="button"
-              onClick={() => handleRoleSwitch(role.id)}
-              className={`
-                flex
-                items-center
-                justify-center
-                gap-1.5
-                rounded-lg
-                px-2
-                py-2
-                text-[11px]
-                font-semibold
-                transition-all
-                duration-200
-
-                ${
-                  isActive
-                    ? "bg-white text-[#15803D] shadow-sm"
-                    : "text-[#64748B] hover:text-[#15803D]"
-                }
-              `}
-            >
-              <HugeiconsIcon
-                icon={role.icon}
-                size={15}
-                strokeWidth={isActive ? 2 : 1.6}
-              />
-
-              <span>{role.name}</span>
-            </button>
-          );
-        })}
-      </div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#15803D] shadow-sm">
+          <HugeiconsIcon icon={Briefcase01Icon} size={18} strokeWidth={2} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block leading-4">
+            {hasProviderRole ? <>Switch to<br />Service Provider</> : "Become a Provider"}
+          </span>
+          <span className="mt-0.5 block text-[10px] font-semibold text-[#4B7C5E]">
+            {hasProviderRole ? "Open your business workspace" : "Create your business profile"}
+          </span>
+        </span>
+        <HugeiconsIcon icon={ArrowRight02Icon} size={18} strokeWidth={2} />
+      </button>
     </div>
   );
 }

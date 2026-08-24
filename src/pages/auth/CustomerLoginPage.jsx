@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -12,19 +12,11 @@ import {
   Mail01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
-
-/* =========================================================
-   API CONFIG
-
-   Later production me .env me:
-   VITE_API_BASE_URL=https://api.yourdomain.com
-========================================================= */
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { apiRequest, saveSession } from "../../lib/api";
 
 function CustomerLoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   /* =======================================================
      FORM STATE
@@ -32,7 +24,7 @@ function CustomerLoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
 
   const [password, setPassword] = useState("");
 
@@ -41,16 +33,6 @@ function CustomerLoginPage() {
   const [error, setError] = useState("");
 
   const [successMessage, setSuccessMessage] = useState("");
-
-  /* =======================================================
-     PHONE NORMALIZER
-  ======================================================= */
-
-  const normalizePhone = (value) => {
-    return String(value || "")
-      .replace(/\D/g, "")
-      .slice(0, 15);
-  };
 
   /* ----- LOGIN ----- */
 
@@ -64,24 +46,30 @@ function CustomerLoginPage() {
     setError("");
     setSuccessMessage("");
 
-    const cleanPhone = normalizePhone(phone);
-
-    const cleanPassword = password.trim();
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password;
 
     /* =====================================================
        FRONTEND VALIDATION
     ===================================================== */
 
-    if (!cleanPhone) {
-      setError("Please enter your mobile number.");
+    if (!cleanIdentifier) {
+      setError("Please enter your email or mobile number.");
 
       return;
     }
 
-    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-      setError("Please enter a valid mobile number.");
-
-      return;
+    if (cleanIdentifier.includes("@")) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanIdentifier)) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+    } else {
+      const phoneDigits = cleanIdentifier.replace(/\D/g, "");
+      if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+        setError("Please enter a valid email or mobile number.");
+        return;
+      }
     }
 
     if (!cleanPassword) {
@@ -99,40 +87,14 @@ function CustomerLoginPage() {
     setLoading(true);
 
     try {
-      /* ===================================================
-         STEP 1
-         LOGIN API
-      =================================================== */
-
-      const loginResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const loginData = await apiRequest("/api/auth/login", {
         method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-
-          Accept: "application/json",
-        },
-
-        body: JSON.stringify({
-          phone: cleanPhone,
+        token: null,
+        body: {
+          identifier: cleanIdentifier,
           password: cleanPassword,
-        }),
+        },
       });
-
-      let loginData = null;
-
-      try {
-        loginData = await loginResponse.json();
-      } catch {
-        throw new Error("Invalid response received from server.");
-      }
-
-      if (!loginResponse.ok || !loginData?.success) {
-        throw new Error(
-          loginData?.message ||
-            "Login failed. Please check your mobile number and password.",
-        );
-      }
 
       /* ===================================================
          CHECK TOKEN
@@ -144,38 +106,7 @@ function CustomerLoginPage() {
         throw new Error("Authentication token was not received.");
       }
 
-      /* ===================================================
-         STEP 2
-         VERIFY TOKEN USING /ME
-      =================================================== */
-
-      const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        method: "GET",
-
-        headers: {
-          Accept: "application/json",
-
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      let meData = null;
-
-      try {
-        meData = await meResponse.json();
-      } catch {
-        throw new Error("Unable to verify login session.");
-      }
-
-      if (!meResponse.ok || !meData?.success || !meData?.user) {
-        throw new Error(meData?.message || "Unable to verify your account.");
-      }
-
-      /* ===================================================
-         CUSTOMER ROLE CHECK
-      =================================================== */
-
-      const roles = Array.isArray(meData.user.roles) ? meData.user.roles : [];
+      const roles = Array.isArray(loginData.user?.roles) ? loginData.user.roles : [];
 
       if (!roles.includes("CUSTOMER")) {
         throw new Error("This account does not have customer access.");
@@ -185,17 +116,13 @@ function CustomerLoginPage() {
          SAVE AUTH DATA
       =================================================== */
 
-      localStorage.setItem("local_sewa_token", token);
-
-      localStorage.setItem("local_sewa_user", JSON.stringify(meData.user));
-
-      localStorage.setItem("local_sewa_active_role", "CUSTOMER");
+      saveSession(token, loginData.user, "CUSTOMER");
 
       /* ===================================================
          SUCCESS
       =================================================== */
 
-      setSuccessMessage(`Welcome back, ${meData.user.full_name}!`);
+      setSuccessMessage(`Welcome back, ${loginData.user.full_name}!`);
 
       /*
        * Small delay so success message
@@ -203,7 +130,11 @@ function CustomerLoginPage() {
        */
 
       setTimeout(() => {
-        navigate("/", {
+        const requestedPath = location.state?.from;
+        const nextPath = typeof requestedPath === "string" && !requestedPath.startsWith("/provider")
+          ? requestedPath
+          : "/";
+        navigate(nextPath, {
           replace: true,
         });
       }, 500);
@@ -224,8 +155,8 @@ function CustomerLoginPage() {
     <main
       className="
         relative
-        min-h-screen
-        overflow-hidden
+        min-h-dvh
+        overflow-x-hidden
         bg-gradient-to-br
         from-[#F0FDF4]
         via-[#E8F9ED]
@@ -274,7 +205,7 @@ function CustomerLoginPage() {
           relative
           mx-auto
           flex
-          min-h-[calc(100vh-4rem)]
+          min-h-[calc(100dvh-4rem)]
           w-full
           max-w-md
           items-center
@@ -455,7 +386,7 @@ function CustomerLoginPage() {
 
               <div>
                 <label
-                  htmlFor="customer-login-phone"
+                  htmlFor="customer-login-identifier"
                   className="
                     mb-1.5
                     block
@@ -464,7 +395,7 @@ function CustomerLoginPage() {
                     text-[#334155]
                   "
                 >
-                  Mobile Number
+                  Email or Mobile Number
                 </label>
 
                 <div
@@ -496,15 +427,18 @@ function CustomerLoginPage() {
                   />
 
                   <input
-                    id="customer-login-phone"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    placeholder="Enter mobile number"
-                    value={phone}
+                    id="customer-login-identifier"
+                    name="username"
+                    type="text"
+                    inputMode="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    placeholder="Enter email or mobile number"
+                    value={identifier}
                     disabled={loading}
                     onChange={(event) => {
-                      setPhone(normalizePhone(event.target.value));
+                      setIdentifier(event.target.value.slice(0, 190));
 
                       if (error) {
                         setError("");
@@ -550,26 +484,9 @@ function CustomerLoginPage() {
                     Password
                   </label>
 
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => {
-                      setError(
-                        "Forgot password feature will be available soon.",
-                      );
-                    }}
-                    className="
-                      text-[10px]
-                      font-semibold
-                      text-[#16A34A]
-                      hover:text-[#15803D]
-                      hover:underline
-                      disabled:cursor-not-allowed
-                      disabled:opacity-50
-                    "
-                  >
-                    Forgot password?
-                  </button>
+                  <span className="text-[10px] font-medium text-[#94A3B8]">
+                    Use your registered password
+                  </span>
                 </div>
 
                 <div
@@ -602,7 +519,9 @@ function CustomerLoginPage() {
 
                   <input
                     id="customer-login-password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}

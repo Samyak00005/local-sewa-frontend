@@ -1,15 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Cancel01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
+import { apiRequest, clearSession, getToken } from "../../../lib/api";
 
 /* =========================================================
    COMPONENT
 ========================================================= */
 
 function SidebarLogout({ onClose }) {
+  const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  if (!getToken()) return null;
 
   /* ----- OPEN LOGOUT MODAL ----- */
 
@@ -25,13 +30,17 @@ function SidebarLogout({ onClose }) {
 
   /* ----- CONFIRM LOGOUT ----- */
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setShowLogoutModal(false);
     onClose();
-
-    // ----- LOGOUT LOGIC WILL BE ADDED HERE -----
-
-    console.log("User logged out");
+    try {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Local logout must still complete if the server session already expired.
+    } finally {
+      clearSession();
+      navigate("/auth", { replace: true });
+    }
   };
 
   return (

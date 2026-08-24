@@ -1,67 +1,46 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import {
-  Home01Icon,
-  GridViewIcon,
-  Bookmark01Icon,
-  StarIcon,
-  UserIcon,
-  ArrowLeft01Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Logout01Icon } from "@hugeicons/core-free-icons";
 
-const menuItems = [
-  {
-    name: "Dashboard",
-    path: "/provider/dashboard",
-    icon: Home01Icon,
-  },
-
-  {
-    name: "Service Requests",
-    path: "/provider/requests",
-    icon: Bookmark01Icon,
-  },
-
-  {
-    name: "My Services",
-    path: "/provider/services",
-    icon: GridViewIcon,
-  },
-
-  {
-    name: "Reviews",
-    path: "/provider/reviews",
-    icon: StarIcon,
-  },
-
-  {
-    name: "Business Profile",
-    path: "/provider/profile",
-    icon: UserIcon,
-  },
-];
+import { providerNavigation } from "../../config/providerNavigation";
+import { apiRequest, clearSession } from "../../lib/api";
 
 function ProviderSidebar() {
+  const navigate = useNavigate();
+
+  const switchToCustomer = () => {
+    localStorage.setItem("local_sewa_active_role", "CUSTOMER");
+    navigate("/", { replace: true });
+  };
+
+  const logout = async () => {
+    try {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Local logout still completes if the API session has expired.
+    } finally {
+      clearSession();
+      navigate("/auth", { replace: true });
+    }
+  };
+
   return (
-    <aside className="hidden min-h-screen w-[270px] shrink-0 border-r border-[#E5EDE8] bg-white lg:flex lg:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-[320px] shrink-0 border-r border-white/10 bg-[#123528] text-white lg:flex lg:flex-col">
       {/* Logo */}
 
-      <div className="flex h-[82px] items-center border-b border-[#E5EDE8] px-5">
-        <Link to="/">
-          <img
-            src="/logo 2.png"
-            alt="Local Sewa"
-            className="h-14 w-36 object-contain"
-          />
+      <div className="flex h-[82px] items-center border-b border-white/10 px-5">
+        <Link to="/provider/dashboard" className="flex items-center gap-3" aria-label="Provider dashboard">
+          <img src="/app-icon.svg" alt="" className="h-12 w-12 rounded-2xl shadow-sm ring-1 ring-white/15" />
+          <span><span className="block text-sm font-extrabold text-white">Provider</span><span className="block text-[10px] font-semibold text-[#86EFAC]">Business panel</span></span>
         </Link>
       </div>
 
       {/* Provider label */}
 
       <div className="px-5 pb-3 pt-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9CA3AF]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
           Provider Panel
         </p>
       </div>
@@ -69,7 +48,7 @@ function ProviderSidebar() {
       {/* Navigation */}
 
       <nav className="flex-1 space-y-1 px-3">
-        {menuItems.map((item) => (
+        {providerNavigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
@@ -87,8 +66,8 @@ function ProviderSidebar() {
 
                 ${
                   isActive
-                    ? "bg-[#ECFDF3] text-[#15803D]"
-                    : "text-[#64748B] hover:bg-[#F7FAF8] hover:text-[#10231A]"
+                    ? "bg-white text-[#166534]"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 }
               `
             }
@@ -110,23 +89,25 @@ function ProviderSidebar() {
 
       {/* Back to customer */}
 
-      <div className="border-t border-[#E5EDE8] p-4">
-        <Link
-          to="/"
+      <div className="border-t border-white/10 p-4">
+        <button
+          type="button"
+          data-navigation
+          onClick={switchToCustomer}
           className="
             flex
+            w-full
             items-center
             gap-2
             rounded-xl
-            bg-[#F7FAF8]
+            bg-white/10
             px-4
             py-3
             text-sm
             font-semibold
-            text-[#64748B]
+            text-white
             transition
-            hover:bg-[#ECFDF3]
-            hover:text-[#15803D]
+            hover:bg-white/15
           "
         >
           <HugeiconsIcon
@@ -136,7 +117,11 @@ function ProviderSidebar() {
           />
 
           Switch to Customer
-        </Link>
+        </button>
+        <button type="button" onClick={logout} className="mt-2 flex w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-[#FCA5A5] transition hover:bg-white/10">
+          <HugeiconsIcon icon={Logout01Icon} size={18} strokeWidth={2} />
+          Logout
+        </button>
       </div>
     </aside>
   );

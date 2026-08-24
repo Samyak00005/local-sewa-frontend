@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -13,15 +13,65 @@ import {
     Mail01Icon,
 } from "@hugeicons/core-free-icons";
 
+import { apiRequest, saveSession } from "../../lib/api";
+
 function ProviderLoginPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    if (loading) return;
+
+    if (!identifier.trim() || !password) {
+      setError("Please enter your email/mobile and password.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await apiRequest("/api/auth/login", {
+        method: "POST",
+        token: null,
+        body: { identifier: identifier.trim(), password },
+      });
+      const roles = Array.isArray(data.user?.roles) ? data.user.roles : [];
+      if (!roles.includes("PROVIDER")) {
+        if (roles.includes("CUSTOMER")) {
+          saveSession(data.token, data.user, "CUSTOMER");
+          navigate("/auth/provider/register", { replace: true });
+          return;
+        }
+        throw new Error("This account cannot access the provider panel.");
+      }
+      saveSession(data.token, data.user, "PROVIDER");
+      const requestedPath = location.state?.from;
+      navigate(
+        typeof requestedPath === "string" && requestedPath.startsWith("/provider")
+          ? requestedPath
+          : "/provider/dashboard",
+        { replace: true },
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main
       className="
         relative
-        min-h-screen
-        overflow-hidden
+        min-h-dvh
+        overflow-x-hidden
         bg-gradient-to-br
         from-[#F0FDF4]
         via-[#E8F9ED]
@@ -66,7 +116,7 @@ function ProviderLoginPage() {
           relative
           mx-auto
           flex
-          min-h-[calc(100vh-4rem)]
+          min-h-[calc(100dvh-4rem)]
           w-full
           max-w-md
           items-center
@@ -180,7 +230,7 @@ function ProviderLoginPage() {
             {/* ----- FORM ----- */}
 
             <form
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={handleLogin}
               className="space-y-4 px-5 pb-6 sm:px-7"
             >
               {/* ----- EMAIL / MOBILE ----- */}
@@ -219,7 +269,17 @@ function ProviderLoginPage() {
 
                   <input
                     id="provider-login-email"
+                    name="username"
                     type="text"
+                    inputMode="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    value={identifier}
+                    onChange={(event) => {
+                      setIdentifier(event.target.value);
+                      setError("");
+                    }}
                     placeholder="Enter email or mobile number"
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   />
@@ -237,12 +297,9 @@ function ProviderLoginPage() {
                     Password
                   </label>
 
-                  <button
-                    type="button"
-                    className="text-[10px] font-semibold text-[#16A34A] hover:text-[#15803D]"
-                  >
-                    Forgot password?
-                  </button>
+                  <span className="text-[10px] font-medium text-[#94A3B8]">
+                    Use your registered password
+                  </span>
                 </div>
 
                 <div
@@ -271,7 +328,14 @@ function ProviderLoginPage() {
 
                   <input
                     id="provider-login-password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setError("");
+                    }}
                     placeholder="Enter your password"
                     className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   />
@@ -290,10 +354,17 @@ function ProviderLoginPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="rounded-xl bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700">
+                  {error}
+                </div>
+              )}
+
               {/* ----- LOGIN ----- */}
 
               <button
                 type="submit"
+                disabled={loading}
                 className="
                   flex
                   h-12
@@ -312,7 +383,7 @@ function ProviderLoginPage() {
                   active:scale-[0.99]
                 "
               >
-                Login as Service Provider
+                {loading ? "Logging in..." : "Login as Service Provider"}
                 <HugeiconsIcon
                   icon={ArrowRight02Icon}
                   size={17}

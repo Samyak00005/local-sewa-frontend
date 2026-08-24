@@ -41,6 +41,7 @@ const navItems = [
 function BottomNavBar() {
   return (
     <nav
+      data-bottom-navigation
       className="
         fixed
         bottom-0

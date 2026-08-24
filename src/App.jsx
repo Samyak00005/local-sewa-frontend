@@ -1,16 +1,24 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 
 import BottomNavBar from "./components/common/BottomNavBar";
+import ActiveRoleBoundary from "./components/common/ActiveRoleBoundary";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import ScrollToTop from "./components/common/ScrollToTop";
 
 /* -----  CUSTOMER / MAIN PAGES -----*/
 
 import AuthPage from "./pages/auth/AuthPage";
 import HomePage from "./pages/common/HomePage";
+import EmergencyServicesPage from "./pages/common/EmergencyServicesPage";
+import LegalPage from "./pages/common/LegalPage";
+import NotFoundPage from "./pages/common/NotFoundPage";
+import SupportPage from "./pages/common/SupportPage";
 import AllServicesPage from "./pages/customer/AllServicesPage";
 import BookingsPage from "./pages/customer/BookingsPage";
+import BookProviderPage from "./pages/customer/BookProviderPage";
 import NearbyServicesPage from "./pages/customer/NearbyServicesPage";
 import ProfilePage from "./pages/customer/ProfilePage";
+import ProviderDetailsPage from "./pages/customer/ProviderDetailsPage";
 import ServiceCategoryPage from "./pages/customer/ServiceCategoryPage";
 import SavedPage from "./pages/customer/SavedPage";
 
@@ -46,6 +54,7 @@ function App() {
     >
       <ScrollToTop />
 
+      <ActiveRoleBoundary>
       <Routes>
         {/* ----- AUTHENTICATION ----- */}
 
@@ -79,15 +88,55 @@ function App() {
 
         <Route path="/services/:category" element={<ServiceCategoryPage />} />
 
+        <Route path="/providers/:providerId" element={<ProviderDetailsPage />} />
+
         <Route path="/nearby" element={<NearbyServicesPage />} />
 
-        <Route path="/bookings" element={<BookingsPage />} />
+        <Route path="/emergency" element={<EmergencyServicesPage />} />
 
-        <Route path="/saved" element={<SavedPage />} />
+        <Route path="/terms" element={<LegalPage type="terms" />} />
+
+        <Route path="/privacy" element={<LegalPage type="privacy" />} />
+
+        <Route path="/support" element={<SupportPage />} />
+
+        <Route
+          path="/book/:providerId"
+          element={
+            <ProtectedRoute role="CUSTOMER">
+              <BookProviderPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute role="CUSTOMER">
+              <BookingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/saved"
+          element={
+            <ProtectedRoute role="CUSTOMER">
+              <SavedPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* CUSTOMER PROFILE */}
 
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute role="CUSTOMER">
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ===================================================
             SERVICE PROVIDER PANEL
@@ -95,24 +144,62 @@ function App() {
 
         {/* PROVIDER DASHBOARD */}
 
-        <Route path="/provider/dashboard" element={<ProviderDashboardPage />} />
+        <Route
+          path="/provider/dashboard"
+          element={
+            <ProtectedRoute role="PROVIDER">
+              <ProviderDashboardPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PROVIDER REQUESTS */}
 
-        <Route path="/provider/requests" element={<ProviderRequestsPage />} />
+        <Route
+          path="/provider/requests"
+          element={
+            <ProtectedRoute role="PROVIDER">
+              <ProviderRequestsPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PROVIDER SERVICES */}
 
-        <Route path="/provider/services" element={<ProviderServicesPage />} />
+        <Route
+          path="/provider/services"
+          element={
+            <ProtectedRoute role="PROVIDER">
+              <ProviderServicesPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PROVIDER REVIEWS */}
 
-        <Route path="/provider/reviews" element={<ProviderReviewsPage />} />
+        <Route
+          path="/provider/reviews"
+          element={
+            <ProtectedRoute role="PROVIDER">
+              <ProviderReviewsPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PROVIDER BUSINESS PROFILE */}
 
-        <Route path="/provider/profile" element={<ProviderProfilePage />} />
+        <Route
+          path="/provider/profile"
+          element={
+            <ProtectedRoute role="PROVIDER">
+              <ProviderProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </ActiveRoleBoundary>
 
       {/* =====================================================
           CUSTOMER BOTTOM NAVIGATION

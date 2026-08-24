@@ -8,8 +8,31 @@ import {
   StarIcon,
 } from "@hugeicons/core-free-icons";
 
+import { apiRequest } from "../../lib/api";
+
 function ProviderProfileCard({ provider }) {
   const [available, setAvailable] = useState(provider.available);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState("");
+
+  const toggleAvailability = async () => {
+    if (updating) return;
+    const nextValue = !available;
+    setError("");
+    setAvailable(nextValue);
+    setUpdating(true);
+    try {
+      await apiRequest("/api/provider/availability", {
+        method: "PATCH",
+        body: { available: nextValue },
+      });
+    } catch (error) {
+      setAvailable(!nextValue);
+      setError(error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <section
@@ -122,7 +145,8 @@ function ProviderProfileCard({ provider }) {
 
         <button
           type="button"
-          onClick={() => setAvailable(!available)}
+          onClick={toggleAvailability}
+          disabled={updating}
           className={`
             relative
             h-7
@@ -161,6 +185,7 @@ function ProviderProfileCard({ provider }) {
       <div className="mt-3 text-xs font-semibold text-white/80">
         {available ? "🟢 Currently Available" : "⚪ Currently Offline"}
       </div>
+      {error && <p role="alert" className="mt-3 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold text-white">{error}</p>}
     </section>
   );
 }
