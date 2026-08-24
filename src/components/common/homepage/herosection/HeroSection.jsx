@@ -89,6 +89,8 @@ function HeroSection() {
           sm:pb-14
           sm:pt-8
           lg:px-8
+          lg:pb-20
+          lg:pt-12
         "
       >
         {/* ----- LOCATION + HERO CONTENT ----- */}

@@ -2,42 +2,15 @@ import { NavLink } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import {
-  Home01Icon,
-  Bookmark01Icon,
-  GridViewIcon,
-  UserIcon,
-} from "@hugeicons/core-free-icons";
-
-const navItems = [
-  {
-    name: "Dashboard",
-    path: "/provider/dashboard",
-    icon: Home01Icon,
-  },
-
-  {
-    name: "Requests",
-    path: "/provider/requests",
-    icon: Bookmark01Icon,
-  },
-
-  {
-    name: "Services",
-    path: "/provider/services",
-    icon: GridViewIcon,
-  },
-
-  {
-    name: "Profile",
-    path: "/provider/profile",
-    icon: UserIcon,
-  },
-];
+import { providerNavigation } from "../../config/providerNavigation";
+import { useProviderRequestCount } from "../../hooks/useProviderRequestCount";
 
 function ProviderBottomNav() {
+  const pendingRequestCount = useProviderRequestCount();
+
   return (
     <nav
+      data-bottom-navigation
       className="
         fixed
         bottom-0
@@ -45,8 +18,8 @@ function ProviderBottomNav() {
         right-0
         z-50
         border-t
-        border-[#E5EDE8]
-        bg-white/95
+        border-[#B8CCC0]
+        bg-[#F4F8F5]/95
         px-3
         pb-[env(safe-area-inset-bottom)]
         pt-2
@@ -56,14 +29,15 @@ function ProviderBottomNav() {
       "
     >
       <div className="mx-auto flex max-w-md items-center justify-around">
-        {navItems.map((item) => (
+        {providerNavigation.map((item) => (
           <NavLink
-            key={item.name}
+            key={item.path}
             to={item.path}
             className={({ isActive }) =>
               `
                 flex
-                min-w-[68px]
+                min-w-0
+                flex-1
                 flex-col
                 items-center
                 gap-1
@@ -74,8 +48,8 @@ function ProviderBottomNav() {
                 font-semibold
                 ${
                   isActive
-                    ? "text-[#16A34A]"
-                    : "text-[#7A8580]"
+                    ? "text-[#14532D]"
+                    : "text-[#40584C] hover:text-[#1F5139]"
                 }
               `
             }
@@ -84,6 +58,7 @@ function ProviderBottomNav() {
               <>
                 <div
                   className={`
+                    relative
                     flex
                     h-8
                     w-10
@@ -93,7 +68,7 @@ function ProviderBottomNav() {
 
                     ${
                       isActive
-                        ? "bg-[#ECFDF3]"
+                        ? "bg-[#D8E9DF]"
                         : ""
                     }
                   `}
@@ -103,9 +78,17 @@ function ProviderBottomNav() {
                     size={20}
                     strokeWidth={isActive ? 2.2 : 1.7}
                   />
+                  {item.path === "/provider/requests" && pendingRequestCount > 0 && (
+                    <span
+                      aria-label={`${pendingRequestCount} new booking ${pendingRequestCount === 1 ? "request" : "requests"}`}
+                      className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#14532D] px-1 text-[9px] font-extrabold leading-none text-white ring-2 ring-[#F4F8F5]"
+                    >
+                      {pendingRequestCount > 99 ? "99+" : pendingRequestCount}
+                    </span>
+                  )}
                 </div>
 
-                {item.name}
+                {item.shortName}
               </>
             )}
           </NavLink>

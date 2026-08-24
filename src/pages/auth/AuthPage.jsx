@@ -13,8 +13,8 @@ function AuthPage() {
     <main
       className="
         relative
-        min-h-screen
-        overflow-hidden
+        min-h-dvh
+        overflow-x-hidden
         bg-gradient-to-br
         from-[#F0FDF4]
         via-[#E8F9ED]
@@ -59,7 +59,7 @@ function AuthPage() {
           relative
           mx-auto
           flex
-          min-h-[calc(100vh-4rem)]
+          min-h-[calc(100dvh-4rem)]
           w-full
           max-w-md
           items-center

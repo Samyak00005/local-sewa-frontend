@@ -1,18 +1,18 @@
 import {
   Alert02Icon,
   Bookmark01Icon,
+  Calendar03Icon,
   File02Icon,
   HelpCircleIcon,
   Home01Icon,
-  Message01Icon,
-  Notification01Icon,
-  Settings02Icon,
+  GridViewIcon,
   Shield01Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 
 import SidebarMenuItem from "./SidebarMenuItem";
 import SidebarSection from "./SidebarSection";
+import { getStoredUser, getToken } from "../../../lib/api";
 
 /* ----- QUICK ACCESS ----- */
 
@@ -23,19 +23,19 @@ const quickAccessItems = [
     icon: Home01Icon,
   },
   {
-    name: "Saved Services",
+    name: "All Services",
+    path: "/services",
+    icon: GridViewIcon,
+  },
+  {
+    name: "My Bookings",
+    path: "/bookings",
+    icon: Calendar03Icon,
+  },
+  {
+    name: "Saved Providers",
     path: "/saved",
     icon: Bookmark01Icon,
-  },
-  {
-    name: "Messages",
-    path: "/messages",
-    icon: Message01Icon,
-  },
-  {
-    name: "Notifications",
-    path: "/notifications",
-    icon: Notification01Icon,
   },
 ];
 
@@ -57,11 +57,6 @@ const supportItems = [
     path: "/privacy",
     icon: Shield01Icon,
   },
-  {
-    name: "Settings",
-    path: "/settings",
-    icon: Settings02Icon,
-  },
 ];
 
 /* =========================================================
@@ -69,6 +64,14 @@ const supportItems = [
 ========================================================= */
 
 function SidebarNavigation({ onClose }) {
+  const user = getStoredUser();
+  const userRoles = Array.isArray(user?.roles)
+    ? user.roles.map((role) => String(role).toUpperCase())
+    : [];
+  const showBecomeProvider = Boolean(getToken())
+    && userRoles.includes("CUSTOMER")
+    && !userRoles.includes("PROVIDER");
+
   return (
     <nav className="px-3 pt-4">
       {/* ----- QUICK ACCESS ----- */}
@@ -99,14 +102,16 @@ function SidebarNavigation({ onClose }) {
 
       {/* ----- FOR HELPERS ----- */}
 
-      <SidebarSection label="For Helpers">
-        <SidebarMenuItem
-          name="Become a Service Provider"
-          path="/become-provider"
-          icon={UserAdd01Icon}
-          onClick={onClose}
-        />
-      </SidebarSection>
+      {showBecomeProvider && (
+        <SidebarSection label="For Helpers">
+          <SidebarMenuItem
+            name="Become a Service Provider"
+            path="/auth/provider/register"
+            icon={UserAdd01Icon}
+            onClick={onClose}
+          />
+        </SidebarSection>
+      )}
 
       {/* ----- SUPPORT ----- */}
 

@@ -1,53 +1,63 @@
-# Local Sewa
+# Local Sewa V10 — React Frontend
 
-Local Sewa is a local services platform designed to connect customers with nearby service providers.
+This is the frontend-only React/Vite source for Local Sewa V10.
 
-The platform provides a simple way for customers to discover local services, find nearby service providers, manage bookings, save services, and access emergency services.
+- The PHP API, MySQL database and Hostinger configuration are not included.
+- Local development connects to the existing live API at `https://localsewa.com/api` through the Vite development proxy.
+- Production builds use the same live API URL.
+- The Vite build uses relative asset paths so the generated `dist` folder is suitable for an Android wrapper.
 
----
+## Run on a Windows computer
 
-## Features
+### Easy method
 
-### Customer
+1. Install the current Node.js LTS version from <https://nodejs.org/>.
+2. Extract this ZIP.
+3. Double-click `START_LOCAL_WINDOWS.bat`.
+4. On the first run it installs the required frontend packages.
+5. Open `http://localhost:5173` if the browser does not open automatically.
 
-- Customer login and registration
-- Browse local services
-- Search for services
-- Find nearby services
-- Book services
-- Manage bookings
-- Save services
-- View profile
-- Messages
-- Notifications
-- Emergency services
-- Location-based services
+### Terminal method
 
-### Service Provider
+```bash
+npm install
+npm run dev
+```
 
-- Service provider login and registration
-- Manage services
-- Manage bookings
-- Manage profile
-- Switch between Customer and Service Provider modes
+Do not open `index.html` directly. The local development server is required for React routing and the live API proxy.
 
-### Authentication
+## Create the production frontend
 
-Local Sewa provides separate authentication flows for both user types:
+Double-click `BUILD_FRONTEND_WINDOWS.bat`, or run:
 
-- Customer Login
-- Customer Registration
-- Service Provider Login
-- Service Provider Registration
+```bash
+npm install
+npm run build
+```
 
-### User Interface
+The finished frontend files are generated inside `dist`.
 
-- Mobile-first design
-- Responsive layouts
-- Component-based architecture
-- Modern green-themed UI
-- Mobile sidebar navigation
-- Bottom navigation
-- Profile section
-- Location section
-- Role switcher
+## Android app preparation
+
+The recommended later step is to wrap this React build with Capacitor or an Android WebView project.
+
+Typical Capacitor commands are:
+
+```bash
+npm install @capacitor/core @capacitor/cli @capacitor/android
+npx cap init "Local Sewa" "com.localsewa.app" --web-dir=dist
+npm run build
+npx cap add android
+npx cap sync android
+npx cap open android
+```
+
+Important: a bundled Android WebView has a different origin from `localsewa.com`. Before publishing a bundled app, configure either native HTTP networking in the Android wrapper or allow the Android app origin in the live API CORS settings. This does not require changing API routes or database data. A WebView that directly opens `https://localsewa.com` does not require this extra CORS step.
+
+## Configuration files
+
+- `.env.development`: local frontend + live API proxy.
+- `.env.production`: production/Android build + live API URL.
+- `.env.example`: safe template with no passwords or database credentials.
+
+Never place the Hostinger database password in this React project.

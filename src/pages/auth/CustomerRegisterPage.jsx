@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -14,16 +14,87 @@ import {
   UserIcon,
 } from "@hugeicons/core-free-icons";
 
+import { apiRequest, saveSession } from "../../lib/api";
+
 function CustomerRegisterPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [form, setForm] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    password: "",
+    confirm_password: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    setError("");
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (loading) return;
+
+    const phone = form.phone.replace(/\D/g, "").slice(0, 15);
+    if (form.full_name.trim().length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (phone.length < 10) {
+      setError("Please enter a valid mobile number.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (form.password !== form.confirm_password) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const data = await apiRequest("/api/auth/customer/register", {
+        method: "POST",
+        token: null,
+        body: {
+          full_name: form.full_name.trim(),
+          phone,
+          email: form.email.trim().toLowerCase() || null,
+          password: form.password,
+        },
+      });
+      saveSession(data.token, data.user, "CUSTOMER");
+      setSuccessMessage("Account created successfully!");
+      const requestedPath = location.state?.from;
+      const nextPath = typeof requestedPath === "string" && !requestedPath.startsWith("/provider")
+        ? requestedPath
+        : "/";
+      setTimeout(() => navigate(nextPath, { replace: true }), 600);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main
       className="
         relative
-        min-h-screen
-        overflow-hidden
+        min-h-dvh
+        overflow-x-hidden
         bg-gradient-to-br
         from-[#F0FDF4]
         via-[#E8F9ED]
@@ -68,6 +139,7 @@ function CustomerRegisterPage() {
 
         <Link
           to="/auth/customer/login"
+          state={{ from: location.state?.from }}
           className="
             mb-4
             inline-flex
@@ -179,7 +251,7 @@ function CustomerRegisterPage() {
           {/* ----- FORM ----- */}
 
           <form
-            onSubmit={(event) => event.preventDefault()}
+            onSubmit={handleSubmit}
             className="space-y-4 px-5 pb-4 sm:px-7"
           >
             {/* ----- FULL NAME ----- */}
@@ -218,7 +290,10 @@ function CustomerRegisterPage() {
 
                 <input
                   id="customer-name"
+                  name="full_name"
                   type="text"
+                  value={form.full_name}
+                  onChange={handleChange}
                   placeholder="Enter your full name"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   required
@@ -262,7 +337,10 @@ function CustomerRegisterPage() {
 
                 <input
                   id="customer-mobile"
+                  name="phone"
                   type="tel"
+                  value={form.phone}
+                  onChange={handleChange}
                   placeholder="Enter your mobile number"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   required
@@ -306,7 +384,10 @@ function CustomerRegisterPage() {
 
                 <input
                   id="customer-email"
+                  name="email"
                   type="email"
+                  value={form.email}
+                  onChange={handleChange}
                   placeholder="Enter your email"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                 />
@@ -349,7 +430,10 @@ function CustomerRegisterPage() {
 
                 <input
                   id="customer-password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={handleChange}
                   placeholder="Create a password"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   required
@@ -405,7 +489,10 @@ function CustomerRegisterPage() {
 
                 <input
                   id="customer-confirm-password"
+                  name="confirm_password"
                   type={showConfirmPassword ? "text" : "password"}
+                  value={form.confirm_password}
+                  onChange={handleChange}
                   placeholder="Confirm your password"
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#A0AAA5]"
                   required
@@ -449,10 +536,23 @@ function CustomerRegisterPage() {
               </span>
             </label>
 
+            {error && (
+              <div className="rounded-xl bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700">
+                {error}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="rounded-xl bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-700">
+                {successMessage}
+              </div>
+            )}
+
             {/* ----- CREATE ACCOUNT ----- */}
 
             <button
               type="submit"
+              disabled={loading}
               className="
                 flex
                 h-12
@@ -471,7 +571,7 @@ function CustomerRegisterPage() {
                 active:scale-[0.99]
               "
             >
-              Create Customer Account
+              {loading ? "Creating account..." : "Create Customer Account"}
               <HugeiconsIcon
                 icon={ArrowRight02Icon}
                 size={17}

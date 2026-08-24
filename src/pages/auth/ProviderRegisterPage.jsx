@@ -12,13 +12,7 @@ import {
   Mail01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
-
-/* =========================================================
-   API
-========================================================= */
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { apiRequest, getToken, saveSession } from "../../lib/api";
 
 /* =========================================================
    PAGE
@@ -47,10 +41,13 @@ function ProviderRegisterPage() {
 
   const [successMessage, setSuccessMessage] = useState("");
 
+  const [whatsappSameAsPhone, setWhatsappSameAsPhone] = useState(false);
+
   const [form, setForm] = useState({
     business_name: "",
     business_description: "",
     category: "",
+    custom_category: "",
     experience_years: "",
     whatsapp: "",
     alternate_phone: "",
@@ -81,7 +78,7 @@ function ProviderRegisterPage() {
         setPageLoading(true);
         setError("");
 
-        const token = localStorage.getItem("local_sewa_token");
+        const token = getToken();
 
         /* ===============================================
              CUSTOMER MUST LOGIN FIRST
@@ -100,32 +97,7 @@ function ProviderRegisterPage() {
              GET CURRENT USER
           =============================================== */
 
-        const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-          method: "GET",
-
-          headers: {
-            Accept: "application/json",
-
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const meData = await meResponse.json();
-
-        if (!meResponse.ok || !meData?.success || !meData?.user) {
-          localStorage.removeItem("local_sewa_token");
-
-          localStorage.removeItem("local_sewa_user");
-
-          localStorage.removeItem("local_sewa_active_role");
-
-          if (!cancelled) {
-            setNeedsLogin(true);
-            setPageLoading(false);
-          }
-
-          return;
-        }
+        const meData = await apiRequest("/api/auth/me");
 
         const currentUser = meData.user;
 
@@ -168,6 +140,8 @@ function ProviderRegisterPage() {
         if (!cancelled) {
           setUser(currentUser);
 
+          setWhatsappSameAsPhone(Boolean(currentUser.phone));
+
           setForm((previous) => ({
             ...previous,
 
@@ -181,19 +155,7 @@ function ProviderRegisterPage() {
              LOAD CATEGORIES
           =============================================== */
 
-        const categoryResponse = await fetch(`${API_BASE_URL}/api/categories`, {
-          headers: {
-            Accept: "application/json",
-          },
-        });
-
-        const categoryData = await categoryResponse.json();
-
-        if (!categoryResponse.ok || !categoryData?.success) {
-          throw new Error(
-            categoryData?.message || "Unable to load service categories.",
-          );
-        }
+        const categoryData = await apiRequest("/api/categories", { token: null });
 
         if (!cancelled) {
           setCategories(
@@ -206,9 +168,11 @@ function ProviderRegisterPage() {
         console.error("BECOME PROVIDER PAGE ERROR:", loadError);
 
         if (!cancelled) {
-          setError(
-            loadError?.message || "Unable to load provider registration.",
-          );
+          if (loadError?.status === 401) {
+            setNeedsLogin(true);
+          } else {
+            setError(loadError?.message || "Unable to load provider registration.");
+          }
         }
       } finally {
         if (!cancelled) {
@@ -256,7 +220,7 @@ function ProviderRegisterPage() {
     setError("");
     setSuccessMessage("");
 
-    const token = localStorage.getItem("local_sewa_token");
+    const token = getToken();
 
     if (!token) {
       setNeedsLogin(true);
@@ -271,6 +235,7 @@ function ProviderRegisterPage() {
     const description = form.business_description.trim();
 
     const category = form.category.trim();
+    const customCategory = form.custom_category.trim().replace(/\s+/g, " ");
 
     const whatsapp = normalizePhone(form.whatsapp);
 
@@ -290,6 +255,18 @@ function ProviderRegisterPage() {
 
     if (!category) {
       setError("Please select your service category.");
+
+      return;
+    }
+
+    if (category === "__custom__" && customCategory.length < 3) {
+      setError("Please enter a custom category with at least 3 characters.");
+
+      return;
+    }
+
+    if (category === "__custom__" && !/^[\p{L}\p{N}][\p{L}\p{N}\s&\-/,().+]*$/u.test(customCategory)) {
+      setError("Please enter a valid custom service category.");
 
       return;
     }
@@ -337,46 +314,21 @@ function ProviderRegisterPage() {
            CREATE PROVIDER PROFILE
         ================================================= */
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/provider/register`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-
-            Accept: "application/json",
-
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            business_name: businessName,
-
-            business_description: description || null,
-
-            category,
-
-            experience_years: experience,
-
-            whatsapp,
-
-            alternate_phone: alternatePhone || null,
-
-            business_email: businessEmail || null,
-
-            home_service: form.home_service,
-
-            shop_service: form.shop_service,
-          }),
+      const data = await apiRequest("/api/auth/provider/register", {
+        method: "POST",
+        body: {
+          business_name: businessName,
+          business_description: description || null,
+          category: category === "__custom__" ? "" : category,
+          custom_category: category === "__custom__" ? customCategory : null,
+          experience_years: experience,
+          whatsapp,
+          alternate_phone: alternatePhone || null,
+          business_email: businessEmail || null,
+          home_service: form.home_service,
+          shop_service: form.shop_service,
         },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Unable to create provider profile.");
-      }
+      });
 
       /* =================================================
            BACKEND RETURNS NEW TOKEN
@@ -385,33 +337,11 @@ function ProviderRegisterPage() {
 
       const newToken = data.token || token;
 
-      localStorage.setItem("local_sewa_token", newToken);
-
-      /* =================================================
-           FETCH UPDATED /ME
-        ================================================= */
-
-      const meResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        headers: {
-          Accept: "application/json",
-
-          Authorization: `Bearer ${newToken}`,
-        },
-      });
-
-      const meData = await meResponse.json();
-
-      if (!meResponse.ok || !meData?.success || !meData?.user) {
-        throw new Error(
-          "Provider account was created, but account information could not be refreshed.",
-        );
-      }
-
       /* =================================================
            VERIFY PROVIDER ROLE
         ================================================= */
 
-      const roles = Array.isArray(meData.user.roles) ? meData.user.roles : [];
+      const roles = Array.isArray(data.user?.roles) ? data.user.roles : [];
 
       if (!roles.includes("PROVIDER")) {
         throw new Error("Provider role could not be activated.");
@@ -421,9 +351,7 @@ function ProviderRegisterPage() {
            SAVE UPDATED USER
         ================================================= */
 
-      localStorage.setItem("local_sewa_user", JSON.stringify(meData.user));
-
-      localStorage.setItem("local_sewa_active_role", "PROVIDER");
+      saveSession(newToken, data.user, "PROVIDER");
 
       setSuccessMessage("Provider account activated successfully!");
 
@@ -454,7 +382,7 @@ function ProviderRegisterPage() {
       <main
         className="
           flex
-          min-h-screen
+          min-h-dvh
           items-center
           justify-center
           bg-[#F0FDF4]
@@ -499,7 +427,7 @@ function ProviderRegisterPage() {
       <main
         className="
           flex
-          min-h-screen
+          min-h-dvh
           items-center
           justify-center
           bg-gradient-to-br
@@ -631,7 +559,7 @@ function ProviderRegisterPage() {
       <main
         className="
           flex
-          min-h-screen
+          min-h-dvh
           items-center
           justify-center
           bg-gradient-to-br
@@ -698,7 +626,7 @@ function ProviderRegisterPage() {
             onClick={() => {
               localStorage.setItem("local_sewa_active_role", "PROVIDER");
 
-              navigate("/provider/dashboard");
+              navigate("/provider/dashboard", { replace: true });
             }}
             className="
               mt-6
@@ -732,8 +660,8 @@ function ProviderRegisterPage() {
     <main
       className="
         relative
-        min-h-screen
-        overflow-hidden
+        min-h-dvh
+        overflow-x-hidden
         bg-gradient-to-br
         from-[#F0FDF4]
         via-[#E8F9ED]
@@ -1082,7 +1010,28 @@ function ProviderRegisterPage() {
                     {category.name}
                   </option>
                 ))}
+                <option value="__custom__">Other — Add a new category</option>
               </select>
+
+              {form.category === "__custom__" && (
+                <div className="mt-3 rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] p-3">
+                  <label htmlFor="custom-provider-category" className="mb-1.5 block text-[11px] font-bold text-[#166534]">
+                    New service category
+                  </label>
+                  <input
+                    id="custom-provider-category"
+                    name="custom_category"
+                    value={form.custom_category}
+                    onChange={handleChange}
+                    maxLength={100}
+                    placeholder="Example: Drone Photography"
+                    className="h-11 w-full rounded-xl border border-[#86EFAC] bg-white px-3 text-sm outline-none focus:border-[#16A34A] focus:ring-4 focus:ring-[#DCFCE7]"
+                  />
+                  <p className="mt-2 text-[10px] font-medium leading-4 text-[#527060]">
+                    This category will be added to All Services and will be visible to customers.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* DESCRIPTION */}
@@ -1201,7 +1150,9 @@ function ProviderRegisterPage() {
                   name="whatsapp"
                   type="tel"
                   value={form.whatsapp}
+                  disabled={whatsappSameAsPhone}
                   onChange={(event) => {
+                    setWhatsappSameAsPhone(false);
                     setForm((previous) => ({
                       ...previous,
 
@@ -1214,9 +1165,29 @@ function ProviderRegisterPage() {
                     bg-transparent
                     text-sm
                     outline-none
+                    disabled:text-[#64748B]
                   "
                 />
               </div>
+
+              <label className="mt-2.5 flex cursor-pointer items-start gap-2.5 rounded-xl bg-[#F0FDF4] px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={whatsappSameAsPhone}
+                  onChange={(event) => {
+                    const useSameNumber = event.target.checked;
+                    setWhatsappSameAsPhone(useSameNumber);
+                    if (useSameNumber) {
+                      setForm((previous) => ({ ...previous, whatsapp: normalizePhone(user?.phone) }));
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+                />
+                <span>
+                  <span className="block text-xs font-bold text-[#166534]">Same as my account phone number</span>
+                  <span className="mt-0.5 block text-[11px] leading-4 text-[#64748B]">Turn this off if your WhatsApp number is different.</span>
+                </span>
+              </label>
             </div>
 
             {/* BUSINESS EMAIL */}

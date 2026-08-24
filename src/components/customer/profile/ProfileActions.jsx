@@ -6,10 +6,12 @@ import {
   Bookmark01Icon,
   Location01Icon,
 } from "@hugeicons/core-free-icons";
+import { usePreferredLocation } from "../../../hooks/usePreferredLocation";
 
 function ProfileActions() {
+  const [location] = usePreferredLocation();
   return (
-    <section className="mt-6">
+    <section className="mt-6 lg:mt-0">
       <div className="mb-3">
         <h2 className="text-lg font-bold tracking-tight text-[#111827]">
           Quick Actions
@@ -45,8 +47,8 @@ function ProfileActions() {
         </Link>
 
         {/* Location */}
-        <button
-          type="button"
+        <Link
+          to="/nearby"
           className="group flex w-full items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 text-left transition hover:border-[#BBF7D0] hover:shadow-sm"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-[#6B7280]">
@@ -57,7 +59,7 @@ function ProfileActions() {
             <h3 className="text-sm font-semibold text-[#111827]">Location</h3>
 
             <p className="mt-0.5 text-xs text-[#6B7280]">
-              Currently showing services in Chandrapur
+              Currently showing services in {location}
             </p>
           </div>
 
@@ -67,7 +69,7 @@ function ProfileActions() {
             strokeWidth={2}
             className="text-[#9CA3AF]"
           />
-        </button>
+        </Link>
       </div>
     </section>
   );

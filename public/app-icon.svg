@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title id="title">Local Sewa</title>
+  <defs>
+    <linearGradient id="bg" x1="13" y1="8" x2="82" y2="89" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123B8F"/>
+      <stop offset="1" stop-color="#071F55"/>
+    </linearGradient>
+    <linearGradient id="road" x1="19" y1="76" x2="80" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16A34A"/>
+      <stop offset="1" stop-color="#4ADE80"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="24" fill="url(#bg)"/>
+  <path d="M19 46 48 21l29 25v25a8 8 0 0 1-8 8H27a8 8 0 0 1-8-8V46Z" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+  <path d="m38 63 20-20" stroke="#fff" stroke-linecap="round" stroke-width="6"/>
+  <path d="M33 44a10 10 0 0 0 12 12L34 67a5 5 0 0 1-7-7l11-11a10 10 0 0 0-5-5Z" fill="#FACC15" stroke="#fff" stroke-linejoin="round" stroke-width="3"/>
+  <path d="M13 78c18-4 30-13 45-14 11-1 19 2 27 6v14H13V78Z" fill="url(#road)"/>
+  <path d="M26 81c15-4 24-10 36-10 6 0 11 1 16 3" fill="none" stroke="#fff" stroke-dasharray="7 6" stroke-linecap="round" stroke-width="3"/>
+  <path d="M76 15a10 10 0 0 0-10 10c0 8 10 18 10 18s10-10 10-18a10 10 0 0 0-10-10Z" fill="#EF4444" stroke="#fff" stroke-width="3"/>
+  <circle cx="76" cy="25" r="3.5" fill="#fff"/>
+</svg>

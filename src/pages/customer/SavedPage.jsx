@@ -5,33 +5,47 @@ import { Link } from "react-router-dom";
 import {
   ArrowLeft01Icon,
   Bookmark01Icon,
-  Call02Icon,
-  WhatsappIcon,
+  Calendar03Icon,
   StarIcon,
   CheckmarkCircle01Icon,
   Location01Icon,
+  ViewIcon,
 } from "@hugeicons/core-free-icons";
 
 import Header from "../../components/common/Header";
-import providersData from "../../data/providers.json";
+import { apiRequest } from "../../lib/api";
 
 function SavedPage() {
   const [savedProviders, setSavedProviders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Get saved provider IDs
-    const savedIds = JSON.parse(localStorage.getItem("savedProviders") || "[]");
+    let cancelled = false;
+    apiRequest("/api/saved")
+      .then((data) => {
+        if (!cancelled) setSavedProviders(data.providers || []);
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    // Get all providers from JSON
-    const allProviders = Object.values(providersData).flat();
-
-    // Match saved IDs with providers from JSON
-    const saved = allProviders.filter((provider) =>
-      savedIds.includes(provider.id),
-    );
-
-    setSavedProviders(saved);
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const removeSaved = async (providerId) => {
+    try {
+      await apiRequest(`/api/saved/${encodeURIComponent(providerId)}`, { method: "DELETE" });
+      setSavedProviders((current) => current.filter((provider) => provider.id !== providerId));
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20 text-[#111827]">
@@ -84,8 +98,14 @@ function SavedPage() {
       {/* Saved Providers */}
       <main className="px-4 py-4">
         <div className="mx-auto max-w-7xl">
-          {savedProviders.length > 0 ? (
-            <div className="space-y-3">
+          {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+
+          {loading ? (
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white px-5 py-12 text-center text-sm font-semibold text-[#6B7280]">
+              Loading saved providers...
+            </div>
+          ) : savedProviders.length > 0 ? (
+            <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
               {savedProviders.map((provider) => (
                 <article
                   key={provider.id}
@@ -162,35 +182,24 @@ function SavedPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <a
-                      href={`tel:${provider.phone}`}
-                      className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#16A34A] text-sm font-semibold text-white transition hover:bg-[#15803D] active:scale-[0.98]"
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <Link to={`/providers/${encodeURIComponent(provider.id)}`} className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#DDE9E1] bg-white text-xs font-bold text-[#334155] hover:bg-[#F8FAFC]">
+                      <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />Details
+                    </Link>
+                    <Link
+                      to={`/book/${encodeURIComponent(provider.id)}`}
+                      className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#10231A] text-xs font-bold text-white"
                     >
-                      <HugeiconsIcon
-                        icon={Call02Icon}
-                        size={17}
-                        strokeWidth={2}
-                      />
-                      Call
-                    </a>
+                      <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />Book
+                    </Link>
 
-                    <a
-                      href={`https://wa.me/${provider.whatsapp.replace(
-                        /[^0-9]/g,
-                        "",
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] bg-white text-sm font-semibold text-[#374151] transition hover:bg-[#F1F5F9] active:scale-[0.98]"
+                    <button
+                      type="button"
+                      onClick={() => removeSaved(provider.id)}
+                      className="flex h-10 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-xs font-bold text-red-700"
                     >
-                      <HugeiconsIcon
-                        icon={WhatsappIcon}
-                        size={17}
-                        strokeWidth={2}
-                      />
-                      WhatsApp
-                    </a>
+                      Remove
+                    </button>
                   </div>
                 </article>
               ))}
